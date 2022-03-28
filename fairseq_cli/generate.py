@@ -296,7 +296,6 @@ def _main(cfg: DictConfig, output_file):
                                     lambda x: "{:.4f}".format(x),
                                     # convert from base e to base 2
                                     hypo["positional_scores"]
-                                    .div_(math.log(2))
                                     .tolist(),
                                 )
                             ),
@@ -340,9 +339,7 @@ def _main(cfg: DictConfig, output_file):
                             " ".join(
                                 map(
                                     lambda x: "{:.4f}".format(x),
-                                    lm_scores
-                                    .div_(math.log(2))
-                                    .tolist(),
+                                    lm_scores.tolist(),
                                 )
                             ),
                         ),
