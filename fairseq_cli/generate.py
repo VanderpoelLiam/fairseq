@@ -168,6 +168,8 @@ def _main(cfg: DictConfig, output_file):
         models, cfg.generation, extra_gen_cls_kwargs=extra_gen_cls_kwargs
     )
 
+    print(lms[0].score('Barack Obama is coming to Sydney and New Zealand')['positional_scores'])
+
     # Handle tokenization and BPE
     tokenizer = task.build_tokenizer(cfg.tokenizer)
     bpe = task.build_bpe(cfg.bpe)
