@@ -306,9 +306,9 @@ def _main(cfg: DictConfig, output_file):
                     # ---------------- LIAM START ----------------
                     tokens = hypo_str
 
-                    full_scores = hypo["positional_scores"].div_(math.log(2)).tolist()
+                    full_scores = hypo["positional_scores"]
 
-                    lm_scores = lm_model.score(tokens)['positional_scores'].div_(math.log(2)).tolist()
+                    lm_scores = lm_model.score(tokens)['positional_scores']
 
                     # print(len(full_scores))
                     # print(len(lm_scores))
@@ -317,7 +317,9 @@ def _main(cfg: DictConfig, output_file):
                     # print(lm_scores)
                     # print(hypo_str)
 
-                    sm_scores = (np.asarray(full_scores[:-1]) - cfg.generation.lm_weight * np.asarray(lm_scores)).tolist()
+                    t1 = full_scores[:-1].numpy()
+                    t2 = cfg.generation.lm_weight * lm_scores.numpy()
+                    sm_scores = (t1 - t2) / np.log(2)
 
                     print(
                         "P_SM-{}\t{}".format(
@@ -325,7 +327,7 @@ def _main(cfg: DictConfig, output_file):
                             " ".join(
                                 map(
                                     lambda x: "{:.4f}".format(x),
-                                    sm_scores,
+                                    sm_scores.tolist(),
                                 )
                             ),
                         ),
@@ -338,7 +340,9 @@ def _main(cfg: DictConfig, output_file):
                             " ".join(
                                 map(
                                     lambda x: "{:.4f}".format(x),
-                                    lm_scores,
+                                    lm_scores
+                                    .div_(math.log(2))
+                                    .tolist(),
                                 )
                             ),
                         ),
