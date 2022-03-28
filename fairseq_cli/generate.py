@@ -173,17 +173,8 @@ def _main(cfg: DictConfig, output_file):
     lm_dir = cfg.generation.lm_path.split("checkpoint_best.pt")[0]
     lm_model = TransformerLanguageModel.from_pretrained(lm_dir, "checkpoint_best.pt", cfg.task.data)
 
-    tokens = "One of Mexico &apos;s biggest airlines , Mex@@ ic@@ ana de Avi@@ ac@@ ion , is to suspend all flights , three weeks after filing for bankruptcy protection ."
-    print(lm_model.score(tokens)['positional_scores'])
-
-    lm_out = self.lm_model(tokens)
-    probs = lm_model.get_normalized_probs(
-        lm_out, log_probs=True, sample=None
-    )
-    print(probs)
-    # custom_lm = FairseqLanguageModelWithScoring.from_pretrained(lm_dir, 'checkpoint_best.pt', cfg.task.data)
-    # print(custom_lm.score('Barack Obama is coming to Sydney and New Zealand')['positional_scores'])
-    assert False
+    # tokens = "One of Mexico &apos;s biggest airlines , Mex@@ ic@@ ana de Avi@@ ac@@ ion , is to suspend all flights , three weeks after filing for bankruptcy protection ."
+    # print(lm_model.score(tokens)['positional_scores'])
     # ---------------- LIAM END ----------------
 
     # Handle tokenization and BPE
@@ -315,7 +306,39 @@ def _main(cfg: DictConfig, output_file):
                         ),
                         file=output_file,
                     )
+                    # ---------------- LIAM START ----------------
+                    full_scores = hypo["positional_scores"].div_(math.log(2)).tolist()
 
+                    lm_scores = lm_model.score(tokens)['positional_scores'].div_(math.log(2)).tolist()
+
+                    sm_scores = full_scores - cfg.generation.lm_weight * lm_scores
+
+                    print(
+                        "P_SM-{}\t{}".format(
+                            sample_id,
+                            " ".join(
+                                map(
+                                    lambda x: "{:.4f}".format(x),
+                                    sm_scores,
+                                )
+                            ),
+                        ),
+                        file=output_file,
+                    )
+
+                    print(
+                        "P_LM-{}\t{}".format(
+                            sample_id,
+                            " ".join(
+                                map(
+                                    lambda x: "{:.4f}".format(x),
+                                    lm_scores,
+                                )
+                            ),
+                        ),
+                        file=output_file,
+                    )
+                    # ---------------- LIAM END ----------------
                     if cfg.generation.print_alignment == "hard":
                         print(
                             "A-{}\t{}".format(
