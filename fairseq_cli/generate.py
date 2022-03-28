@@ -309,7 +309,7 @@ def _main(cfg: DictConfig, output_file):
                     # ---------------- LIAM START ----------------
                     full_scores = hypo["positional_scores"].div_(math.log(2)).tolist()
 
-                    lm_scores = lm_model.score(tokens)['positional_scores'].div_(math.log(2)).tolist()
+                    lm_scores = lm_model.score(hypo_str)['positional_scores'].div_(math.log(2)).tolist()
 
                     sm_scores = full_scores - cfg.generation.lm_weight * lm_scores
 
