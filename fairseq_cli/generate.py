@@ -172,9 +172,6 @@ def _main(cfg: DictConfig, output_file):
     from fairseq.models.transformer_lm import TransformerLanguageModel
     lm_dir = cfg.generation.lm_path.split("checkpoint_best.pt")[0]
     lm_model = TransformerLanguageModel.from_pretrained(lm_dir, "checkpoint_best.pt", cfg.task.data)
-
-    # tokens = "One of Mexico &apos;s biggest airlines , Mex@@ ic@@ ana de Avi@@ ac@@ ion , is to suspend all flights , three weeks after filing for bankruptcy protection ."
-    # print(lm_model.score(tokens)['positional_scores'])
     # ---------------- LIAM END ----------------
 
     # Handle tokenization and BPE
@@ -309,13 +306,18 @@ def _main(cfg: DictConfig, output_file):
                     # ---------------- LIAM START ----------------
                     full_scores = hypo["positional_scores"].div_(math.log(2)).tolist()
 
-                    lm_scores = lm_model.score(hypo_str)['positional_scores'].div_(math.log(2)).tolist()
+                    print(tgt_dict.eos())
+
+                    tokens = hypo_str + " " + tgt_dict.eos()
+
+                    lm_scores = lm_model.score(tokens)['positional_scores'].div_(math.log(2)).tolist()
 
                     print(len(full_scores))
                     print(len(lm_scores))
-                    print(len(hypo_str))
+                    print(len(hypo_str.split()))
                     print(full_scores)
                     print(lm_scores)
+                    print(hypo_str)
 
                     sm_scores = (np.asarray(full_scores) - cfg.generation.lm_weight * np.asarray(lm_scores)).tolist()
 
