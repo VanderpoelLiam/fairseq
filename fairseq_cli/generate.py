@@ -24,6 +24,67 @@ from fairseq.dataclass.utils import convert_namespace_to_omegaconf
 from fairseq.logging import progress_bar
 from fairseq.logging.meters import StopwatchMeter, TimeMeter
 
+# ---------------- LIAM START ----------------
+import torch
+import copy
+
+from fairseq import hub_utils
+from fairseq.models.fairseq_model import FairseqLanguageModel
+
+
+class GeneratorHubInterfaceWithScoring(hub_utils.GeneratorHubInterface):
+
+    def score(self,
+              sentence: str,
+              verbose: bool = False,
+              **kwargs) -> float:
+
+        tokens = sentence.split(" ")
+        num_tokens = len(tokens)
+
+        encoded_sentence = self.binarize(sentence)
+        sample = self._build_sample(encoded_sentence)
+
+        # build generator using current args as well as any kwargs
+        gen_args = copy.copy(self.args)
+        gen_args.beam = 1
+        gen_args.max_len_b = num_tokens
+        for k, v in kwargs.items():
+            setattr(gen_args, k, v)
+        generator = self.task.build_generator(gen_args)
+
+        translations = self.task.inference_step(generator, self.models, sample)
+
+        hypo = translations[0][0]
+        score = hypo['score']
+
+        scored_tokens = hypo['tokens']
+        scored_sentence = self.string(scored_tokens)
+
+        assert sentence == scored_sentence, "Input tokens and the ones that are actually scored do not seem identical:\n%s\n%s" % (sentence, scored_sentence)
+
+        if verbose:
+            print("TOKENS:\t%s" % scored_tokens)
+
+        return score
+
+
+class FairseqLanguageModelWithScoring(FairseqLanguageModel):
+
+    @classmethod
+    def from_pretrained(cls, model_name_or_path, checkpoint_file='model.pt', data_name_or_path='.', **kwargs):
+
+        x = hub_utils.from_pretrained(
+            model_name_or_path,
+            checkpoint_file,
+            data_name_or_path,
+            archive_map=cls.hub_models(),
+            **kwargs,
+        )
+
+        return GeneratorHubInterfaceWithScoring(x['args'], x['task'], x['models'])
+
+# ---------------- LIAM END ----------------
 
 def main(cfg: DictConfig):
 
@@ -168,9 +229,12 @@ def _main(cfg: DictConfig, output_file):
         models, cfg.generation, extra_gen_cls_kwargs=extra_gen_cls_kwargs
     )
 
-    print(cfg.generation.lm_path)
-    # LIAM
-    # print(lms[0].score('Barack Obama is coming to Sydney and New Zealand')['positional_scores'])
+    # ---------------- LIAM START ----------------
+    lm_dir = cfg.generation.lm_path.split("checkpoint_best.pt")[0]
+    custom_lm = FairseqLanguageModelWithScoring.from_pretrained(lm_dir, 'checkpoint_best.pt')
+    print(custom_lm.score('Barack Obama is coming to Sydney and New Zealand')['positional_scores'])
+    assert False
+    # ---------------- LIAM END ----------------
 
     # Handle tokenization and BPE
     tokenizer = task.build_tokenizer(cfg.tokenizer)
