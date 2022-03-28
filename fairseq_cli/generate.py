@@ -311,7 +311,7 @@ def _main(cfg: DictConfig, output_file):
 
                     lm_scores = lm_model.score(hypo_str)['positional_scores'].div_(math.log(2)).tolist()
 
-                    sm_scores = full_scores - cfg.generation.lm_weight * lm_scores
+                    sm_scores = (np.asarray(full_scores) - cfg.generation.lm_weight * np.asarray(lm_scores)).tolist()
 
                     print(
                         "P_SM-{}\t{}".format(
