@@ -171,10 +171,10 @@ def _main(cfg: DictConfig, output_file):
     # ---------------- LIAM START ----------------
     from fairseq.models.transformer_lm import TransformerLanguageModel
     lm_dir = cfg.generation.lm_path.split("checkpoint_best.pt")[0]
-    lm_model = TransformerLanguageModel.from_pretrained(lm_dir, "checkpoint_best.pt", cfg.task.data, tokenizer='moses', bpe='fastbpe')
+    lm_model = TransformerLanguageModel.from_pretrained(lm_dir, "checkpoint_best.pt", cfg.task.data)
 
-    tokens = 'Barack Obama is coming to Sydney and New Zealand'
-    print(lm_model.score()['positional_scores'])
+    tokens = "One of Mexico &apos;s biggest airlines , Mex@@ ic@@ ana de Avi@@ ac@@ ion , is to suspend all flights , three weeks after filing for bankruptcy protection ."
+    print(lm_model.score(tokens)['positional_scores'])
 
     lm_out = self.lm_model(tokens)
     probs = lm_model.get_normalized_probs(
