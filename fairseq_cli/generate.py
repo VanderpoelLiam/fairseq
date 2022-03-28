@@ -317,8 +317,8 @@ def _main(cfg: DictConfig, output_file):
                     # print(lm_scores)
                     # print(hypo_str)
 
-                    t1 = full_scores[:-1].numpy()
-                    t2 = cfg.generation.lm_weight * lm_scores.numpy()
+                    t1 = full_scores[:-1].cpu().detach().numpy()
+                    t2 = cfg.generation.lm_weight * lm_scores.cpu().detach().numpy()
                     sm_scores = (t1 - t2) / np.log(2)
 
                     print(
