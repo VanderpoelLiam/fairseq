@@ -169,9 +169,10 @@ def _main(cfg: DictConfig, output_file):
     )
 
     # ---------------- LIAM START ----------------
-    from fairseq.models.transformer_lm import TransformerLanguageModel
-    lm_dir = cfg.generation.lm_path.split("checkpoint_best.pt")[0]
-    lm_model = TransformerLanguageModel.from_pretrained(lm_dir, "checkpoint_best.pt", cfg.task.data)
+    if cfg.generation.lm_path is not None:
+        from fairseq.models.transformer_lm import TransformerLanguageModel
+        lm_dir = cfg.generation.lm_path.split("checkpoint_best.pt")[0]
+        lm_model = TransformerLanguageModel.from_pretrained(lm_dir, "checkpoint_best.pt", cfg.task.data)
     # ---------------- LIAM END ----------------
 
     # Handle tokenization and BPE
@@ -307,50 +308,51 @@ def _main(cfg: DictConfig, output_file):
                         file=output_file,
                     )
                     # ---------------- LIAM START ----------------
-                    tokens = hypo_str
+                    if cfg.generation.lm_path is not None:
+                        tokens = hypo_str
 
-                    full_scores = hypo["positional_scores"]
+                        full_scores = hypo["positional_scores"]
 
-                    lm_scores = lm_model.score(tokens)['positional_scores']
+                        lm_scores = lm_model.score(tokens)['positional_scores']
 
-                    # print(len(full_scores))
-                    # print(len(lm_scores))
-                    # print(len(hypo_str.split()))
-                    # print(full_scores)
-                    # print(lm_scores)
-                    # print(hypo_str)
+                        # print(len(full_scores))
+                        # print(len(lm_scores))
+                        # print(len(hypo_str.split()))
+                        # print(full_scores)
+                        # print(lm_scores)
+                        # print(hypo_str)
 
-                    # TODO: Why is full_scores 1 token longer than lm_scores?
+                        # TODO: Why is full_scores 1 token longer than lm_scores?
 
-                    t1 = full_scores[:-1].cpu().detach().numpy()
-                    t2 = cfg.generation.lm_weight * lm_scores.cpu().detach().numpy()
-                    sm_scores = (t1 - t2)
+                        t1 = full_scores[:-1].cpu().detach().numpy()
+                        t2 = cfg.generation.lm_weight * lm_scores.cpu().detach().numpy()
+                        sm_scores = (t1 - t2)
 
-                    print(
-                        "P_SM-{}\t{}".format(
-                            sample_id,
-                            " ".join(
-                                map(
-                                    lambda x: "{:.4f}".format(x),
-                                    sm_scores.tolist(),
-                                )
+                        print(
+                            "P_SM-{}\t{}".format(
+                                sample_id,
+                                " ".join(
+                                    map(
+                                        lambda x: "{:.4f}".format(x),
+                                        sm_scores.tolist(),
+                                    )
+                                ),
                             ),
-                        ),
-                        file=output_file,
-                    )
+                            file=output_file,
+                        )
 
-                    print(
-                        "P_LM-{}\t{}".format(
-                            sample_id,
-                            " ".join(
-                                map(
-                                    lambda x: "{:.4f}".format(x),
-                                    lm_scores.tolist(),
-                                )
+                        print(
+                            "P_LM-{}\t{}".format(
+                                sample_id,
+                                " ".join(
+                                    map(
+                                        lambda x: "{:.4f}".format(x),
+                                        lm_scores.tolist(),
+                                    )
+                                ),
                             ),
-                        ),
-                        file=output_file,
-                    )
+                            file=output_file,
+                        )
                     # ---------------- LIAM END ----------------
                     if cfg.generation.print_alignment == "hard":
                         print(
