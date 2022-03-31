@@ -215,8 +215,8 @@ def _main(cfg: DictConfig, output_file):
         )
         if 'ents' in sample:
             all_ents.extend(sample['ents'])
-            # import pprint as pp
-            # pp.pprint(sample['ents'])
+            import pprint as pp
+            pp.pprint(sample['ents'])
 
 
         num_generated_tokens = sum(len(h[0]["tokens"]) for h in hypos)
@@ -454,10 +454,6 @@ def _main(cfg: DictConfig, output_file):
             ),
             file=output_file,
         )
-
-        import pprint as pp
-        print("Entropy")
-        pp.pprint(torch.cat(all_ents, dim=0))
 
     return scorer
 
