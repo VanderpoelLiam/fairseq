@@ -457,7 +457,7 @@ def _main(cfg: DictConfig, output_file):
 
         import pprint as pp
         print("Entropy")
-        pp.print(torch.cat(all_ents, dim=0))
+        pp.pprint(torch.cat(all_ents, dim=0))
 
     return scorer
 
