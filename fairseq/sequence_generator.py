@@ -788,6 +788,7 @@ class EnsembleModel(nn.Module):
         encoder_outs: List[Dict[str, List[Tensor]]],
         incremental_states: List[Dict[str, Dict[str, Optional[Tensor]]]],
         temperature: float = 1.0,
+        return_probs=False,
     ):
         log_probs = []
         avg_attn: Optional[Tensor] = None
@@ -826,14 +827,27 @@ class EnsembleModel(nn.Module):
                 decoder_out[0][:, -1:, :].div_(temperature),
                 None if decoder_len <= 1 else decoder_out[1],
             )
-            probs = model.get_normalized_probs(
+            lprobs = model.get_normalized_probs(
                 decoder_out_tuple, log_probs=True, sample=None
             )
-            probs = probs[:, -1, :]
-            if self.models_size == 1:
-                return probs, attn
+            lprobs = lprobs[:, -1, :]
 
-            log_probs.append(probs)
+            if return_probs:
+                probs = model.get_normalized_probs(
+                    decoder_out_tuple, log_probs=False, sample=None
+                )
+                probs = probs[:, -1, :]
+
+                if self.models_size == 1:
+                    return lprobs, attn, probs
+
+            if self.models_size == 1:
+                return lprobs, attn
+
+            if return_probs:
+                raise NotImplementedError("Did not implement multi-model case where return probs")
+
+            log_probs.append(lprobs)
             if attn is not None:
                 if avg_attn is None:
                     avg_attn = attn
