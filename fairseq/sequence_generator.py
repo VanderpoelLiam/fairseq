@@ -317,6 +317,7 @@ class SequenceGenerator(nn.Module):
         else:
             original_batch_idxs = torch.arange(0, bsz).type_as(tokens)
 
+        all_ents = []
         for step in range(max_len + 1):  # one extra step for EOS marker
             # reorder decoder internal states based on the prev choice of beams
             if reorder_state is not None:
@@ -336,12 +337,16 @@ class SequenceGenerator(nn.Module):
             with torch.autograd.profiler.record_function(
                 "EnsembleModel: forward_decoder"
             ):
-                lprobs, avg_attn_scores = self.model.forward_decoder(
+                lprobs, avg_attn_scores, probs = self.model.forward_decoder(
                     tokens[:, : step + 1],
                     encoder_outs,
                     incremental_states,
                     self.temperature,
+                    return_probs=True,
                 )
+
+            ents = -(lprobs*probs).sum(-1)
+            all_ents.append(ents)
 
             if self.lm_model is not None:
                 lm_out = self.lm_model(tokens[:, : step + 1])
@@ -555,6 +560,8 @@ class SequenceGenerator(nn.Module):
 
             # reorder incremental state in decoder
             reorder_state = active_bbsz_idx
+
+        sample['ents'] = all_ents
 
         # sort by score descending
         for sent in range(len(finalized)):

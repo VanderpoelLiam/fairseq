@@ -211,6 +211,9 @@ def _main(cfg: DictConfig, output_file):
             prefix_tokens=prefix_tokens,
             constraints=constraints,
         )
+        if 'ents' in sample:
+            import pprint as pp
+            pp.pprint(sample['ents'])
         num_generated_tokens = sum(len(h[0]["tokens"]) for h in hypos)
         gen_timer.stop(num_generated_tokens)
 
