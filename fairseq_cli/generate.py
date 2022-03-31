@@ -191,6 +191,7 @@ def _main(cfg: DictConfig, output_file):
     num_sentences = 0
     has_target = True
     wps_meter = TimeMeter()
+    all_ents = []
     for sample in progress:
         sample = utils.move_to_cuda(sample) if use_cuda else sample
         if "net_input" not in sample:
@@ -213,8 +214,11 @@ def _main(cfg: DictConfig, output_file):
             constraints=constraints,
         )
         if 'ents' in sample:
-            import pprint as pp
-            pp.pprint(sample['ents'])
+            all_ents.extend(sample['ents'])
+            # import pprint as pp
+            # pp.pprint(sample['ents'])
+
+
         num_generated_tokens = sum(len(h[0]["tokens"]) for h in hypos)
         gen_timer.stop(num_generated_tokens)
 
@@ -450,6 +454,15 @@ def _main(cfg: DictConfig, output_file):
             ),
             file=output_file,
         )
+
+        print(
+            "Entropy={:.4f}".format(
+                torch.cat(all_ents, dim=0).mean()
+            ),
+            file=output_file,
+        )
+
+
 
     return scorer
 
