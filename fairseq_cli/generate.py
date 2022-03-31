@@ -455,14 +455,9 @@ def _main(cfg: DictConfig, output_file):
             file=output_file,
         )
 
-        print(
-            "Entropy={:.4f}".format(
-                torch.cat(all_ents, dim=0).mean()
-            ),
-            file=output_file,
-        )
-
-
+        import pprint as pp
+        print("Entropy")
+        pp.print(torch.cat(all_ents, dim=0))
 
     return scorer
 
