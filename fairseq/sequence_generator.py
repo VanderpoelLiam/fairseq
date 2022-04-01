@@ -344,11 +344,7 @@ class SequenceGenerator(nn.Module):
                     return_probs=True,
                 )
 
-            import pprint as pp
             ents = -(lprobs*probs).sum(-1)
-            # pp.pprint(lprobs)
-            # pp.pprint(probs)
-            # pp.pprint(ents)
 
             if self.lm_model is not None:
                 lm_out = self.lm_model(tokens[:, : step + 1])
@@ -431,12 +427,19 @@ class SequenceGenerator(nn.Module):
 
             finalized_sents: List[int] = []
             if eos_bbsz_idx.numel() > 0:
-                pp.pprint("eos_bbsz_idx")
-                pp.pprint(eos_bbsz_idx)
-                pp.pprint(eos_bbsz_idx.size())
                 eos_scores = torch.masked_select(
                     cand_scores[:, :beam_size], mask=eos_mask[:, :beam_size]
                 )
+
+                import pprint as pp
+                pp.pprint("eos_mask")
+                pp.pprint(eos_mask)
+                pp.pprint("eos_mask.size()")
+                pp.pprint(eos_mask.size())
+                pp.pprint("cand_scores.size()")
+                pp.pprint(cand_scores.size())
+                pp.pprint("eos_scores")
+                pp.pprint(eos_scores)
 
                 finalized_sents = self.finalize_hypos(
                     step,
