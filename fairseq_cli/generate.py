@@ -362,7 +362,7 @@ def _main(cfg: DictConfig, output_file):
                         )
 
                     print(
-                        "E-{}\t{}".format(
+                        "ENT-{}\t{}".format(
                             sample_id,
                             " ".join(
                                 map(
