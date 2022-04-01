@@ -438,8 +438,8 @@ class SequenceGenerator(nn.Module):
                 pp.pprint(eos_mask.size())
                 pp.pprint("cand_scores.size()")
                 pp.pprint(cand_scores.size())
-                pp.pprint("eos_scores")
-                pp.pprint(eos_scores)
+                pp.pprint("ents.size()")
+                pp.pprint(ents.size())
 
                 finalized_sents = self.finalize_hypos(
                     step,
