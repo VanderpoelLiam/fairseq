@@ -360,6 +360,21 @@ def _main(cfg: DictConfig, output_file):
                             ),
                             file=output_file,
                         )
+
+                    print(
+                        "E-{}\t{}".format(
+                            sample_id,
+                            " ".join(
+                                map(
+                                    lambda x: "{:.4f}".format(x),
+                                    # convert from base e to base 2
+                                    hypo["entropy"]
+                                    .tolist(),
+                                )
+                            ),
+                        ),
+                        file=output_file,
+                    )
                     # ---------------- LIAM END ----------------
                     if cfg.generation.print_alignment == "hard":
                         print(

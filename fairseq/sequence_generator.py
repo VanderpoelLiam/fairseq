@@ -703,6 +703,7 @@ class SequenceGenerator(nn.Module):
                         "attention": hypo_attn,  # src_len x tgt_len
                         "alignment": torch.empty(0),
                         "positional_scores": pos_scores[i],
+                        "entropy": pos_scores[i],
                     }
                 )
 
