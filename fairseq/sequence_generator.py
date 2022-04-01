@@ -317,7 +317,6 @@ class SequenceGenerator(nn.Module):
         else:
             original_batch_idxs = torch.arange(0, bsz).type_as(tokens)
 
-        all_ents = []
         for step in range(max_len + 1):  # one extra step for EOS marker
             # reorder decoder internal states based on the prev choice of beams
             if reorder_state is not None:
@@ -344,13 +343,12 @@ class SequenceGenerator(nn.Module):
                     self.temperature,
                     return_probs=True,
                 )
+
             import pprint as pp
             ents = -(lprobs*probs).sum(-1)
-            pp.pprint(lprobs)
-            pp.pprint(probs)
-            pp.pprint(ents)
-
-            all_ents.append(ents)
+            # pp.pprint(lprobs)
+            # pp.pprint(probs)
+            # pp.pprint(ents)
 
             if self.lm_model is not None:
                 lm_out = self.lm_model(tokens[:, : step + 1])
@@ -433,6 +431,9 @@ class SequenceGenerator(nn.Module):
 
             finalized_sents: List[int] = []
             if eos_bbsz_idx.numel() > 0:
+                pp.pprint("eos_bbsz_idx")
+                pp.pprint(eos_bbsz_idx)
+                pp.pprint(eos_bbsz_idx.size())
                 eos_scores = torch.masked_select(
                     cand_scores[:, :beam_size], mask=eos_mask[:, :beam_size]
                 )
@@ -564,8 +565,6 @@ class SequenceGenerator(nn.Module):
 
             # reorder incremental state in decoder
             reorder_state = active_bbsz_idx
-
-        sample['ents'] = all_ents
 
         # sort by score descending
         for sent in range(len(finalized)):

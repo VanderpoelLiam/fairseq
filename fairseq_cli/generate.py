@@ -191,7 +191,7 @@ def _main(cfg: DictConfig, output_file):
     num_sentences = 0
     has_target = True
     wps_meter = TimeMeter()
-    all_ents = []
+
     for sample in progress:
         sample = utils.move_to_cuda(sample) if use_cuda else sample
         if "net_input" not in sample:
@@ -213,14 +213,6 @@ def _main(cfg: DictConfig, output_file):
             prefix_tokens=prefix_tokens,
             constraints=constraints,
         )
-        # ---------------- LIAM START ----------------
-        if 'ents' in sample:
-            all_ents.extend(sample['ents'])
-            import pprint as pp
-            pp.pprint(sample['ents'])
-            pp.pprint(torch.cat(all_ents, dim=0))
-
-        # ---------------- LIAM END ----------------
 
         num_generated_tokens = sum(len(h[0]["tokens"]) for h in hypos)
         gen_timer.stop(num_generated_tokens)
@@ -290,10 +282,12 @@ def _main(cfg: DictConfig, output_file):
                 if not cfg.common_eval.quiet:
                     score = hypo["score"] / math.log(2)  # convert to base 2
                     # original hypothesis (after tokenization and BPE)
+                    # ---------------- LIAM START ----------------
                     print(
-                        "TOK-{}\t{}\t{}".format(sample_id, score, hypo_tokens),
+                        "TOK-{}\t{}\t{}".format(sample_id, score, hypo_tokens.tolist()),
                         file=output_file,
                     )
+                    # ---------------- LIAM END ----------------
                     print(
                         "H-{}\t{}\t{}".format(sample_id, score, hypo_str),
                         file=output_file,
@@ -320,6 +314,7 @@ def _main(cfg: DictConfig, output_file):
                     )
                     # ---------------- LIAM START ----------------
                     if cfg.generation.lm_path is not None:
+                        # TODO: try passing in hypo_tokens directly to scorer
                         tokens = hypo_str
 
                         full_scores = hypo["positional_scores"]
@@ -333,7 +328,7 @@ def _main(cfg: DictConfig, output_file):
                         # print(lm_scores)
                         # print(hypo_str)
 
-                        # TODO: Why is full_scores 1 token longer than lm_scores?
+                        # TODO: Why is full_scores 1 token longer than lm_scores? --> Because of EOS token at the end
 
                         t1 = full_scores[:-1].cpu().detach().numpy()
                         t2 = cfg.generation.lm_weight * lm_scores.cpu().detach().numpy()
