@@ -344,8 +344,12 @@ class SequenceGenerator(nn.Module):
                     self.temperature,
                     return_probs=True,
                 )
-
+            import pprint as pp
             ents = -(lprobs*probs).sum(-1)
+            pp.pprint(lprobs)
+            pp.pprint(probs)
+            pp.pprint(ents)
+
             all_ents.append(ents)
 
             if self.lm_model is not None:
