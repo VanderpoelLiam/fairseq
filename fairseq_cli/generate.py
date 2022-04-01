@@ -291,6 +291,10 @@ def _main(cfg: DictConfig, output_file):
                     score = hypo["score"] / math.log(2)  # convert to base 2
                     # original hypothesis (after tokenization and BPE)
                     print(
+                        "TOK-{}\t{}\t{}".format(sample_id, score, hypo_tokens),
+                        file=output_file,
+                    )
+                    print(
                         "H-{}\t{}\t{}".format(sample_id, score, hypo_str),
                         file=output_file,
                     )
