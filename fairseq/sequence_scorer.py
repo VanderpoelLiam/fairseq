@@ -77,6 +77,15 @@ class SequenceScorer(object):
                 curr_prob = model.get_normalized_probs(
                     bd, log_probs=len(models) == 1, sample=sample
                 ).data
+
+                # ---------------- LIAM START ----------------
+                assert is_single # Assume this for entropy calcualtions
+                curr_prob_not_log = model.get_normalized_probs(
+                    bd, log_probs=False, sample=sample
+                ).data
+                ent = -(curr_prob*curr_prob_not_log).sum(-1)
+                # ---------------- LIAM END ----------------
+
                 if is_single:
                     probs = gather_target_probs(curr_prob, orig_target)
                 else:
@@ -125,6 +134,9 @@ class SequenceScorer(object):
             tgt_len = ref.numel()
             avg_probs_i = avg_probs[i][start_idxs[i] : start_idxs[i] + tgt_len]
             score_i = avg_probs_i.sum() / tgt_len
+            # ---------------- LIAM START ----------------
+            ent_i = ent[i][start_idxs[i] : start_idxs[i] + tgt_len]
+            # ---------------- LIAM END ----------------
             if avg_attn is not None:
                 avg_attn_i = avg_attn[i]
                 if self.compute_alignment:
@@ -147,6 +159,7 @@ class SequenceScorer(object):
                         "attention": avg_attn_i,
                         "alignment": alignment,
                         "positional_scores": avg_probs_i,
+                        "entropy": ent_i,
                     }
                 ]
             )

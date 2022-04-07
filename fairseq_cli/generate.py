@@ -23,6 +23,7 @@ from fairseq import checkpoint_utils, options, scoring, tasks, utils
 from fairseq.dataclass.utils import convert_namespace_to_omegaconf
 from fairseq.logging import progress_bar
 from fairseq.logging.meters import StopwatchMeter, TimeMeter
+from fairseq.models.transformer import TransformerModel
 
 
 def main(cfg: DictConfig):
@@ -283,6 +284,11 @@ def _main(cfg: DictConfig, output_file):
                     score = hypo["score"] / math.log(2)  # convert to base 2
                     # original hypothesis (after tokenization and BPE)
                     # ---------------- LIAM START ----------------
+                    # sm_dir = cfg.common_eval.path.split("checkpoint_best.pt")[0]
+                    # sm_model = TransformerModel.from_pretrained(sm_dir, "checkpoint_best.pt", cfg.task.data)
+                    # sm_scores = sm_model.score(hypo_str)
+                    # print(sm_scores)
+                    # assert False
                     print(
                         "TOK-{}\t{}\t{}".format(sample_id, score, hypo_tokens.tolist()),
                         file=output_file,
@@ -293,10 +299,10 @@ def _main(cfg: DictConfig, output_file):
                         file=output_file,
                     )
                     # detokenized hypothesis
-                    print(
-                        "D-{}\t{}\t{}".format(sample_id, score, detok_hypo_str),
-                        file=output_file,
-                    )
+                    # print(
+                    #     "D-{}\t{}\t{}".format(sample_id, score, detok_hypo_str),
+                    #     file=output_file,
+                    # )
                     print(
                         "P-{}\t{}".format(
                             sample_id,
@@ -359,21 +365,21 @@ def _main(cfg: DictConfig, output_file):
                             ),
                             file=output_file,
                         )
-
-                    print(
-                        "ENT-{}\t{}".format(
-                            sample_id,
-                            " ".join(
-                                map(
-                                    lambda x: "{:.4f}".format(x),
-                                    # convert from base e to base 2
-                                    hypo["entropy"]
-                                    .tolist(),
-                                )
+                    if cfg.generation.score_reference:
+                        print(
+                            "ENT-{}\t{}".format(
+                                sample_id,
+                                " ".join(
+                                    map(
+                                        lambda x: "{:.4f}".format(x),
+                                        # convert from base e to base 2
+                                        hypo["entropy"]
+                                        .tolist(),
+                                    )
+                                ),
                             ),
-                        ),
-                        file=output_file,
-                    )
+                            file=output_file,
+                        )
                     # ---------------- LIAM END ----------------
                     if cfg.generation.print_alignment == "hard":
                         print(

@@ -431,16 +431,6 @@ class SequenceGenerator(nn.Module):
                     cand_scores[:, :beam_size], mask=eos_mask[:, :beam_size]
                 )
 
-                import pprint as pp
-                pp.pprint("eos_mask")
-                pp.pprint(eos_mask)
-                pp.pprint("eos_mask.size()")
-                pp.pprint(eos_mask.size())
-                pp.pprint("cand_scores.size()")
-                pp.pprint(cand_scores.size())
-                pp.pprint("ents.size()")
-                pp.pprint(ents.size())
-
                 finalized_sents = self.finalize_hypos(
                     step,
                     eos_bbsz_idx,
@@ -709,7 +699,6 @@ class SequenceGenerator(nn.Module):
                         "attention": hypo_attn,  # src_len x tgt_len
                         "alignment": torch.empty(0),
                         "positional_scores": pos_scores[i],
-                        "entropy": pos_scores[i],
                     }
                 )
 
