@@ -60,6 +60,12 @@ class SequenceScorer(object):
 
         orig_target = sample["target"]
 
+        # ---------------- LIAM START ----------------
+        # For generating entropy for language model
+        # from fairseq import hub_utils
+        # lm_model = hub_utils.from_pretrained("checkpoints/lang_full/", "checkpoint_best.pt", "data/xsum-hallucination")['models'][0]
+        # ---------------- LIAM END ----------------
+
         # compute scores for each model in the ensemble
         avg_probs = None
         avg_attn = None
@@ -84,6 +90,15 @@ class SequenceScorer(object):
                     bd, log_probs=False, sample=sample
                 ).data
                 ent = -(curr_prob*curr_prob_not_log).sum(-1)
+
+                # For generating entropy for language model
+                # lm_log_prob = lm_model.get_normalized_probs(
+                #     bd, log_probs=True, sample=sample
+                # ).data
+                # lm_prob = lm_model.get_normalized_probs(
+                #     bd, log_probs=False, sample=sample
+                # ).data
+                # ent = -(lm_log_prob*lm_prob).sum(-1)
                 # ---------------- LIAM END ----------------
 
                 if is_single:
