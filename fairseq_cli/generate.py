@@ -290,7 +290,11 @@ def _main(cfg: DictConfig, output_file):
                     # print(sm_scores)
                     # assert False
                     print(
-                        "TOK-{}\t{}\t{}".format(sample_id, score, hypo_tokens.tolist()),
+                        "TOK-{}\t{}\t{}".format(
+                            sample_id,
+                            score,
+                            " ".join(list(map(str, hypo_tokens.tolist())))
+                            )
                         file=output_file,
                     )
                     # ---------------- LIAM END ----------------
