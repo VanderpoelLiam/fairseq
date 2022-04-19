@@ -367,10 +367,6 @@ def _main(cfg: DictConfig, output_file):
                     if cfg.generation.score_reference:
                         if cfg.generation.lm_path is not None:
                             lm_entropy = lm_model.score(hypo_str)['entropy']
-                            print("hypo_tokens.size()", hypo_tokens.size(), file=output_file)
-                            print("len(lm_entropy)", len(lm_entropy), file=output_file)
-                            print("hypo['entropy'].size()", hypo["entropy"].size(), file=output_file)
-                            assert False
                             print(
                                 "ENT_LANG-{}\t{}".format(
                                     sample_id,
@@ -392,7 +388,7 @@ def _main(cfg: DictConfig, output_file):
                                     map(
                                         lambda x: "{:.4f}".format(x),
                                         hypo["entropy"]
-                                        .tolist(),
+                                        .tolist()[:-1],
                                     )
                                 ),
                             ),
