@@ -284,18 +284,13 @@ def _main(cfg: DictConfig, output_file):
                     score = hypo["score"] / math.log(2)  # convert to base 2
                     # original hypothesis (after tokenization and BPE)
                     # ---------------- LIAM START ----------------
-                    # sm_dir = cfg.common_eval.path.split("checkpoint_best.pt")[0]
-                    # sm_model = TransformerModel.from_pretrained(sm_dir, "checkpoint_best.pt", cfg.task.data)
-                    # sm_scores = sm_model.score(hypo_str)
-                    # print(sm_scores)
-                    # assert False
                     print(
                         "TOK-{}\t{}\t{}".format(
                             sample_id,
                             score,
-                            " ".join(list(map(str, hypo_tokens.tolist())))
-                            )
-                        file=output_file,
+                            " ".join(list(map(str, hypo_tokens.tolist()))),
+                            ),
+                            file=output_file,
                     )
                     # ---------------- LIAM END ----------------
                     print(
@@ -370,13 +365,32 @@ def _main(cfg: DictConfig, output_file):
                             file=output_file,
                         )
                     if cfg.generation.score_reference:
+                        if cfg.generation.lm_path is not None:
+                            lm_entropy = lm_model.score(hypo_str)['entropy']
+                            print("hypo_tokens.size()", hypo_tokens.size(), file=output_file)
+                            print("len(lm_entropy)", len(lm_entropy), file=output_file)
+                            print("hypo['entropy'].size()", hypo["entropy"].size(), file=output_file)
+                            assert False
+                            print(
+                                "ENT_LANG-{}\t{}".format(
+                                    sample_id,
+                                    " ".join(
+                                        map(
+                                            lambda x: "{:.4f}".format(x),
+                                            lm_entropy
+                                            .tolist(),
+                                        )
+                                    ),
+                                ),
+                                file=output_file,
+                            )
+
                         print(
                             "ENT-{}\t{}".format(
                                 sample_id,
                                 " ".join(
                                     map(
                                         lambda x: "{:.4f}".format(x),
-                                        # convert from base e to base 2
                                         hypo["entropy"]
                                         .tolist(),
                                     )

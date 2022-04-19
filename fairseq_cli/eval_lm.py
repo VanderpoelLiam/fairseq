@@ -121,23 +121,7 @@ def eval_lm(
             tokens = hypo["tokens"]
             tgt_len = tokens.numel()
             pos_scores = hypo["positional_scores"].float()
-            # --------------- LIAM START ---------------
-            # This is too long, I dont know what I'm scoring
-            print(
-                "ENT-{}\t{}".format(
-                    sample_id,
-                    " ".join(
-                        map(
-                            lambda x: "{:.4f}".format(x),
-                            # convert from base e to base 2
-                            hypo["entropy"]
-                            .tolist(),
-                        )
-                    ),
-                ),
-            )
-            # --------------- LIAM END ---------------
-
+            
             if remove_bos_token:
                 assert hypo["tokens"][0].item() == target_dictionary.bos()
                 tokens = tokens[1:]
