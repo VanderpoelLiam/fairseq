@@ -170,7 +170,9 @@ def _main(cfg: DictConfig, output_file):
     )
 
     # ---------------- LIAM START ----------------
-    # TODO ask Clara
+    # TODO Try to use generator.generate later on when have sample
+    # or directly overwrite data for score-reference
+    # print(generator.generate(models[0], sample))
     # sm_dir = cfg.common_eval.path.split("checkpoint_best.pt")[0]
     # sm_model = TransformerModel.from_pretrained(sm_dir, "checkpoint_best.pt", cfg.task.data)
     # print(sm_model.score("beep boop"))
