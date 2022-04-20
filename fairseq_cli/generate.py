@@ -164,7 +164,7 @@ def _main(cfg: DictConfig, output_file):
     # Initialize generator
     gen_timer = StopwatchMeter()
 
-    extra_gen_cls_kwargs = {"lm_model": lms[0], "lm_weight": cfg.generation.lm_weight}
+    extra_gen_cls_kwargs = {"lm_model": lms[0], "lm_weight": cfg.generation.lm_weight, "ent_threshold": cfg.generation.ent_threshold}
     generator = task.build_generator(
         models, cfg.generation, extra_gen_cls_kwargs=extra_gen_cls_kwargs
     )
@@ -373,22 +373,24 @@ def _main(cfg: DictConfig, output_file):
                             file=output_file,
                         )
 
-                    if 'entropy' not in hypo:
-                        raise NotImplementedError("Add entropy computation")
+                    # TODO: waiting on Clara, how score with sm?
+                    # if 'entropy' not in hypo:
+                    #     raise NotImplementedError("Add entropy computation")
 
-                    print(
-                        "ENT-{}\t{}".format(
-                            sample_id,
-                            " ".join(
-                                map(
-                                    lambda x: "{:.4f}".format(x),
-                                    hypo["entropy"]
-                                    .tolist()[:-1],
-                                )
+                    if 'entropy' in hypo:
+                        print(
+                            "ENT-{}\t{}".format(
+                                sample_id,
+                                " ".join(
+                                    map(
+                                        lambda x: "{:.4f}".format(x),
+                                        hypo["entropy"]
+                                        .tolist()[:-1],
+                                    )
+                                ),
                             ),
-                        ),
-                        file=output_file,
-                    )
+                            file=output_file,
+                        )
                     # ---------------- LIAM END ----------------
                     if cfg.generation.print_alignment == "hard":
                         print(

@@ -37,6 +37,7 @@ class SequenceGenerator(nn.Module):
         symbols_to_strip_from_output=None,
         lm_model=None,
         lm_weight=1.0,
+        ent_threshold=0.0,
     ):
         """Generates translations of a given source sentence.
 
@@ -112,6 +113,7 @@ class SequenceGenerator(nn.Module):
 
         self.lm_model = lm_model
         self.lm_weight = lm_weight
+        self.ent_threshold = ent_threshold
         if self.lm_model is not None:
             self.lm_model.eval()
 
@@ -343,16 +345,18 @@ class SequenceGenerator(nn.Module):
                     self.temperature,
                     return_probs=True,
                 )
-
+            # ------------- LIAM -------------
             ents = -(lprobs*probs).sum(-1)
-
+            high_ents = ents > self.ent_threshold
             if self.lm_model is not None:
                 lm_out = self.lm_model(tokens[:, : step + 1])
                 probs = self.lm_model.get_normalized_probs(
                     lm_out, log_probs=True, sample=None
                 )
-                probs = probs[:, -1, :] * self.lm_weight
+                weights = self.lm_weight * high_ents
+                probs = probs[:, -1, :] * weights[:, None]
                 lprobs += probs
+            # ------------- LIAM -------------
 
             lprobs[lprobs != lprobs] = torch.tensor(-math.inf).to(lprobs)
 

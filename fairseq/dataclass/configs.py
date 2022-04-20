@@ -927,7 +927,7 @@ class GenerationConfig(FairseqDataclass):
     )
     # ---------------- LIAM ----------------
     ent_threshold: Optional[float] = field(
-    default=None,
+    default=0.0,
     metadata={"help": "begin MMI decoding when entropy exceeds this"},
     )
     # ---------------- LIAM ----------------
