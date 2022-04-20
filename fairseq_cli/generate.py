@@ -170,6 +170,11 @@ def _main(cfg: DictConfig, output_file):
     )
 
     # ---------------- LIAM START ----------------
+    # TODO ask Clara
+    # sm_dir = cfg.common_eval.path.split("checkpoint_best.pt")[0]
+    # sm_model = TransformerModel.from_pretrained(sm_dir, "checkpoint_best.pt", cfg.task.data)
+    # print(sm_model.score("beep boop"))
+    # assert False
     if cfg.generation.lm_path is not None:
         from fairseq.models.transformer_lm import TransformerLanguageModel
         lm_dir = cfg.generation.lm_path.split("checkpoint_best.pt")[0]
@@ -284,24 +289,21 @@ def _main(cfg: DictConfig, output_file):
                     score = hypo["score"] / math.log(2)  # convert to base 2
                     # original hypothesis (after tokenization and BPE)
                     # ---------------- LIAM START ----------------
-                    print(
-                        "TOK-{}\t{}\t{}".format(
-                            sample_id,
-                            score,
-                            " ".join(list(map(str, hypo_tokens.tolist()))),
-                            ),
-                            file=output_file,
-                    )
-                    # ---------------- LIAM END ----------------
+                    if cfg.common_eval.print_tokens:
+                        print(
+                            "TOK-{}\t{}\t{}".format(
+                                sample_id,
+                                score,
+                                " ".join(list(map(str, hypo_tokens.tolist()))),
+                                ),
+                                file=output_file,
+                        )
+
                     print(
                         "H-{}\t{}\t{}".format(sample_id, score, hypo_str),
                         file=output_file,
                     )
-                    # detokenized hypothesis
-                    # print(
-                    #     "D-{}\t{}\t{}".format(sample_id, score, detok_hypo_str),
-                    #     file=output_file,
-                    # )
+
                     print(
                         "P-{}\t{}".format(
                             sample_id,
@@ -311,33 +313,24 @@ def _main(cfg: DictConfig, output_file):
                                     # convert from base e to base 2
                                     hypo["positional_scores"]
                                     .div_(math.log(2))
-                                    .tolist(),
+                                    # [:-1] drops the scoring for the EOS token
+                                    .tolist()[:-1],
                                 )
                             ),
                         ),
                         file=output_file,
                     )
-                    # ---------------- LIAM START ----------------
+
                     if cfg.generation.lm_path is not None:
-                        # TODO: try passing in hypo_tokens directly to scorer
-                        tokens = hypo_str
-
-                        full_scores = hypo["positional_scores"]
-
-                        lm_scores = lm_model.score(tokens)['positional_scores']
-
-                        # print(len(full_scores))
-                        # print(len(lm_scores))
-                        # print(len(hypo_str.split()))
-                        # print(full_scores)
-                        # print(lm_scores)
-                        # print(hypo_str)
-
-                        # TODO: Why is full_scores 1 token longer than lm_scores? --> Because of EOS token at the end
-
-                        t1 = full_scores[:-1].cpu().detach().numpy()
-                        t2 = cfg.generation.lm_weight * lm_scores.cpu().detach().numpy()
-                        sm_scores = (t1 - t2)
+                        # [:-1] drops the scoring for the EOS token
+                        lm_score = lm_model.score(hypo_str)
+                        pos_scores = hypo["positional_scores"][:-1]
+                        lm_pos_scores = lm_score['positional_scores']
+                        t1 = pos_scores.cpu().detach().numpy()
+                        t2 = cfg.generation.lm_weight * lm_pos_scores.cpu().detach().numpy()
+                        sm_pos_scores = (t1 - t2)
+                        # Check they are the same size
+                        assert lm_pos_scores.size()[0] == sm_pos_scores.size
 
                         print(
                             "P_SM-{}\t{}".format(
@@ -345,7 +338,7 @@ def _main(cfg: DictConfig, output_file):
                                 " ".join(
                                     map(
                                         lambda x: "{:.4f}".format(x),
-                                        sm_scores.tolist(),
+                                        sm_pos_scores.tolist(),
                                     )
                                 ),
                             ),
@@ -358,42 +351,44 @@ def _main(cfg: DictConfig, output_file):
                                 " ".join(
                                     map(
                                         lambda x: "{:.4f}".format(x),
-                                        lm_scores.tolist(),
+                                        lm_pos_scores.tolist(),
                                     )
                                 ),
                             ),
                             file=output_file,
                         )
-                    if cfg.generation.score_reference:
-                        if cfg.generation.lm_path is not None:
-                            lm_entropy = lm_model.score(hypo_str)['entropy']
-                            print(
-                                "ENT_LANG-{}\t{}".format(
-                                    sample_id,
-                                    " ".join(
-                                        map(
-                                            lambda x: "{:.4f}".format(x),
-                                            lm_entropy
-                                            .tolist(),
-                                        )
-                                    ),
-                                ),
-                                file=output_file,
-                            )
 
+                        lm_entropy = lm_score['entropy']
                         print(
-                            "ENT-{}\t{}".format(
+                            "ENT_LANG-{}\t{}".format(
                                 sample_id,
                                 " ".join(
                                     map(
                                         lambda x: "{:.4f}".format(x),
-                                        hypo["entropy"]
-                                        .tolist()[:-1],
+                                        lm_entropy
+                                        .tolist(),
                                     )
                                 ),
                             ),
                             file=output_file,
                         )
+
+                    if 'entropy' not in hypo:
+                        raise NotImplementedError("Add entropy computation")
+
+                    print(
+                        "ENT-{}\t{}".format(
+                            sample_id,
+                            " ".join(
+                                map(
+                                    lambda x: "{:.4f}".format(x),
+                                    hypo["entropy"]
+                                    .tolist()[:-1],
+                                )
+                            ),
+                        ),
+                        file=output_file,
+                    )
                     # ---------------- LIAM END ----------------
                     if cfg.generation.print_alignment == "hard":
                         print(

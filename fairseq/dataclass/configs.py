@@ -925,6 +925,12 @@ class GenerationConfig(FairseqDataclass):
         default=None,
         metadata={"help": "path to lm checkpoint for lm fusion"},
     )
+    # ---------------- LIAM ----------------
+    ent_threshold: Optional[float] = field(
+    default=None,
+    metadata={"help": "begin MMI decoding when entropy exceeds this"},
+    )
+    # ---------------- LIAM ----------------
     lm_weight: float = field(
         default=0.0,
         metadata={"help": "weight for lm probs for lm fusion"},
@@ -1014,6 +1020,10 @@ class CommonEvalConfig(FairseqDataclass):
     results_path: Optional[str] = field(
         default=None, metadata={"help": "path to save eval results (optional)"}
     )
+    # ---------------- LIAM ----------------
+    print_tokens: bool = field(default=False, metadata={"help": "print token values"})
+    # ---------------- LIAM ----------------
+
 
 
 @dataclass
