@@ -24,6 +24,7 @@ from fairseq.dataclass.utils import convert_namespace_to_omegaconf
 from fairseq.logging import progress_bar
 from fairseq.logging.meters import StopwatchMeter, TimeMeter
 from fairseq.models.transformer import TransformerModel
+from fairseq.sequence_scorer import SequenceScorer
 
 
 def main(cfg: DictConfig):
@@ -170,13 +171,11 @@ def _main(cfg: DictConfig, output_file):
     )
 
     # ---------------- LIAM START ----------------
-    # TODO Try to use generator.generate later on when have sample
-    # or directly overwrite data for score-reference
-    # print(generator.generate(models[0], sample))
-    # sm_dir = cfg.common_eval.path.split("checkpoint_best.pt")[0]
-    # sm_model = TransformerModel.from_pretrained(sm_dir, "checkpoint_best.pt", cfg.task.data)
-    # print(sm_model.score("beep boop"))
-    # assert False
+    ent_scorer = SequenceScorer(
+        tgt_dict,
+        compute_alignment=getattr(cfg.generation, "print_alignment", False),
+    )
+
     if cfg.generation.lm_path is not None:
         from fairseq.models.transformer_lm import TransformerLanguageModel
         lm_dir = cfg.generation.lm_path.split("checkpoint_best.pt")[0]
@@ -221,7 +220,6 @@ def _main(cfg: DictConfig, output_file):
             prefix_tokens=prefix_tokens,
             constraints=constraints,
         )
-
         num_generated_tokens = sum(len(h[0]["tokens"]) for h in hypos)
         gen_timer.stop(num_generated_tokens)
 
@@ -275,6 +273,23 @@ def _main(cfg: DictConfig, output_file):
                 if has_target:
                     print("T-{}\t{}".format(sample_id, target_str), file=output_file)
 
+            # ---------------- LIAM ----------------
+            # Compute entropy for generated tokens
+            if not getattr(cfg.generation, "score_reference", False):
+                ent_sample = dict(sample)
+                for j, hypo in enumerate(hypos[i][: cfg.generation.nbest]):
+                    target_size = ent_sample['net_input']['prev_output_tokens'][i].size()[0]
+                    target = torch.ones(target_size, dtype=torch.int64) * tgt_dict.pad()
+                    tokens_size = hypo["tokens"].size()[0]
+                    target[:tokens_size] = hypo["tokens"]
+                    ent_sample['net_input']['prev_output_tokens'][i] = target
+                    ent_sample['target'][i] = target
+
+                ent_hypos = ent_scorer.generate(
+                    models, ent_sample, prefix_tokens=prefix_tokens, constraints=constraints
+                )
+            # ---------------- LIAM ----------------
+
             # Process top predictions
             for j, hypo in enumerate(hypos[i][: cfg.generation.nbest]):
                 hypo_tokens, hypo_str, alignment = utils.post_process_prediction(
@@ -290,7 +305,7 @@ def _main(cfg: DictConfig, output_file):
                 if not cfg.common_eval.quiet:
                     score = hypo["score"] / math.log(2)  # convert to base 2
                     # original hypothesis (after tokenization and BPE)
-                    # ---------------- LIAM START ----------------
+                    # ---------------- LIAM ----------------
                     if cfg.common_eval.print_tokens:
                         print(
                             "TOK-{}\t{}\t{}".format(
@@ -375,25 +390,25 @@ def _main(cfg: DictConfig, output_file):
                             file=output_file,
                         )
 
-                    # TODO: waiting on Clara, how score with sm?
-                    # if 'entropy' not in hypo:
-                    #     raise NotImplementedError("Add entropy computation")
 
-                    if 'entropy' in hypo:
-                        print(
-                            "ENT-{}\t{}".format(
-                                sample_id,
-                                " ".join(
-                                    map(
-                                        lambda x: "{:.4f}".format(x),
-                                        hypo["entropy"]
-                                        .tolist()[:-1],
-                                    )
-                                ),
+                    if 'entropy' not in hypo:
+                        ent_hypo = ent_hypos[i][: cfg.generation.nbest][j]
+                        hypo["entropy"] = ent_hypo["entropy"]
+
+                    print(
+                        "ENT-{}\t{}".format(
+                            sample_id,
+                            " ".join(
+                                map(
+                                    lambda x: "{:.4f}".format(x),
+                                    hypo["entropy"]
+                                    .tolist()[:-1],
+                                )
                             ),
-                            file=output_file,
-                        )
-                    # ---------------- LIAM END ----------------
+                        ),
+                        file=output_file,
+                    )
+                    # ---------------- LIAM ----------------
                     if cfg.generation.print_alignment == "hard":
                         print(
                             "A-{}\t{}".format(
