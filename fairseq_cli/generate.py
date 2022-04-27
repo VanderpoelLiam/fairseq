@@ -170,7 +170,7 @@ def _main(cfg: DictConfig, output_file):
         models, cfg.generation, extra_gen_cls_kwargs=extra_gen_cls_kwargs
     )
 
-    # ---------------- LIAM START ----------------
+    # ---------------- LIAM ----------------
     ent_scorer = SequenceScorer(
         tgt_dict,
         compute_alignment=getattr(cfg.generation, "print_alignment", False),
@@ -180,7 +180,7 @@ def _main(cfg: DictConfig, output_file):
         from fairseq.models.transformer_lm import TransformerLanguageModel
         lm_dir = cfg.generation.lm_path.split("checkpoint_best.pt")[0]
         lm_model = TransformerLanguageModel.from_pretrained(lm_dir, "checkpoint_best.pt", cfg.task.data)
-    # ---------------- LIAM END ----------------
+    # ---------------- LIAM ----------------
 
     # Handle tokenization and BPE
     tokenizer = task.build_tokenizer(cfg.tokenizer)
@@ -222,6 +222,27 @@ def _main(cfg: DictConfig, output_file):
         )
         num_generated_tokens = sum(len(h[0]["tokens"]) for h in hypos)
         gen_timer.stop(num_generated_tokens)
+
+        # -------------- LIAM --------------
+        # Compute entropy for generated tokens
+        if not getattr(cfg.generation, "score_reference", False):
+            import torch.nn.functional as F
+            num_samples = sample["id"].size()[0]
+            max_len = cfg.generation.max_len_b # Unsure if always True
+            ent_sample = dict(sample)
+            ent_sample["target"] = torch.zeros((num_samples, max_len), dtype=torch.int64)
+            ent_sample['net_input']['prev_output_tokens'] = torch.zeros((num_samples, max_len), dtype=torch.int64)
+            for i in range(num_samples):
+                for j, hypo in enumerate(hypos[i][: cfg.generation.nbest]):
+                    num_tokens = hypo["tokens"].size()[0]
+                    target = F.pad(input=hypo["tokens"], pad=(0, max_len-num_tokens), mode='constant', value=tgt_dict.pad())
+                    ent_sample['net_input']['prev_output_tokens'][i] = target
+                    ent_sample["target"][i] = target
+
+        ent_hypos = ent_scorer.generate(
+            models, ent_sample, prefix_tokens=prefix_tokens, constraints=constraints
+        )
+        # -------------- LIAM --------------
 
         for i, sample_id in enumerate(sample["id"].tolist()):
             has_target = sample["target"] is not None
@@ -272,23 +293,6 @@ def _main(cfg: DictConfig, output_file):
                     print("S-{}\t{}".format(sample_id, src_str), file=output_file)
                 if has_target:
                     print("T-{}\t{}".format(sample_id, target_str), file=output_file)
-
-            # ---------------- LIAM ----------------
-            # Compute entropy for generated tokens
-            if not getattr(cfg.generation, "score_reference", False):
-                ent_sample = dict(sample)
-                for j, hypo in enumerate(hypos[i][: cfg.generation.nbest]):
-                    target_size = ent_sample['net_input']['prev_output_tokens'][i].size()[0]
-                    target = torch.ones(target_size, dtype=torch.int64) * tgt_dict.pad()
-                    tokens_size = hypo["tokens"].size()[0]
-                    target[:tokens_size] = hypo["tokens"]
-                    ent_sample['net_input']['prev_output_tokens'][i] = target
-                    ent_sample['target'][i] = target
-
-                ent_hypos = ent_scorer.generate(
-                    models, ent_sample, prefix_tokens=prefix_tokens, constraints=constraints
-                )
-            # ---------------- LIAM ----------------
 
             # Process top predictions
             for j, hypo in enumerate(hypos[i][: cfg.generation.nbest]):
