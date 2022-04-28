@@ -230,8 +230,8 @@ def _main(cfg: DictConfig, output_file):
             num_samples = sample["id"].size()[0]
             max_len = cfg.generation.max_len_b # Unsure if always True
             ent_sample = dict(sample)
-            ent_sample["target"] = torch.zeros((num_samples, max_len), dtype=torch.int64)
-            ent_sample['net_input']['prev_output_tokens'] = torch.zeros((num_samples, max_len), dtype=torch.int64)
+            ent_sample["target"] = torch.zeros((num_samples, max_len), dtype=torch.int64).to(sample["id"].device)
+            ent_sample['net_input']['prev_output_tokens'] = torch.zeros((num_samples, max_len), dtype=torch.int64).to(sample["id"].device)
             for i in range(num_samples):
                 for j, hypo in enumerate(hypos[i][: cfg.generation.nbest]):
                     num_tokens = hypo["tokens"].size()[0]
