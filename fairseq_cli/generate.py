@@ -239,9 +239,9 @@ def _main(cfg: DictConfig, output_file):
                     ent_sample['net_input']['prev_output_tokens'][i] = target
                     ent_sample["target"][i] = target
 
-        ent_hypos = ent_scorer.generate(
-            models, ent_sample, prefix_tokens=prefix_tokens, constraints=constraints
-        )
+            ent_hypos = ent_scorer.generate(
+                models, ent_sample, prefix_tokens=prefix_tokens, constraints=constraints
+            )
         # -------------- LIAM --------------
 
         for i, sample_id in enumerate(sample["id"].tolist()):
@@ -310,6 +310,21 @@ def _main(cfg: DictConfig, output_file):
                     score = hypo["score"] / math.log(2)  # convert to base 2
                     # original hypothesis (after tokenization and BPE)
                     # ---------------- LIAM ----------------
+                    pos_scores = hypo["positional_scores"].div_(math.log(2))[:-1].cpu().detach().numpy() # [:-1] drops the scoring for the EOS token
+                    if cfg.generation.lm_path is not None:
+                        lm_score = lm_model.score(hypo_str)
+                        lm_pos_scores = lm_score['positional_scores'].cpu().detach().numpy()
+
+                        if getattr(cfg.generation, "score_reference", False):
+                            # Scorer does not run MMI decoding, so we need to do it manually
+                            sm_pos_scores = pos_scores
+                            pos_scores = sm_pos_scores + cfg.generation.lm_weight * lm_pos_scores
+                        else:
+                            sm_pos_scores = pos_scores - cfg.generation.lm_weight * lm_pos_scores
+
+                        assert lm_pos_scores.size == sm_pos_scores.size # Check they are the same size
+
+
                     if cfg.common_eval.print_tokens:
                         print(
                             "TOK-{}\t{}\t{}".format(
@@ -331,11 +346,7 @@ def _main(cfg: DictConfig, output_file):
                             " ".join(
                                 map(
                                     lambda x: "{:.4f}".format(x),
-                                    # convert from base e to base 2
-                                    hypo["positional_scores"]
-                                    .div_(math.log(2))
-                                    # [:-1] drops the scoring for the EOS token
-                                    .tolist()[:-1],
+                                    pos_scores.tolist(),
                                 )
                             ),
                         ),
@@ -343,16 +354,6 @@ def _main(cfg: DictConfig, output_file):
                     )
 
                     if cfg.generation.lm_path is not None:
-                        # [:-1] drops the scoring for the EOS token
-                        lm_score = lm_model.score(hypo_str)
-                        pos_scores = hypo["positional_scores"][:-1]
-                        lm_pos_scores = lm_score['positional_scores']
-                        t1 = pos_scores.cpu().detach().numpy()
-                        t2 = cfg.generation.lm_weight * lm_pos_scores.cpu().detach().numpy()
-                        sm_pos_scores = (t1 - t2)
-                        # Check they are the same size
-                        assert lm_pos_scores.size()[0] == sm_pos_scores.size
-
                         print(
                             "P_SM-{}\t{}".format(
                                 sample_id,
