@@ -19,6 +19,9 @@ class SequenceScorer(object):
         compute_alignment=False,
         eos=None,
         symbols_to_strip_from_output=None,
+        lm_model=None,
+        lm_weight=1.0,
+        ent_threshold=0.0,
     ):
         self.pad = tgt_dict.pad()
         self.eos = tgt_dict.eos() if eos is None else eos
@@ -30,6 +33,13 @@ class SequenceScorer(object):
             if symbols_to_strip_from_output is not None
             else {self.eos}
         )
+
+        self.lm_model = lm_model
+        self.lm_weight = lm_weight
+        self.ent_threshold = ent_threshold
+        if self.lm_model is not None:
+            self.lm_model.eval()
+
 
     @torch.no_grad()
     def generate(self, models, sample, **kwargs):
@@ -59,7 +69,7 @@ class SequenceScorer(object):
             return probs
 
         orig_target = sample["target"]
-        
+
         # compute scores for each model in the ensemble
         avg_probs = None
         avg_attn = None
@@ -79,11 +89,19 @@ class SequenceScorer(object):
                 ).data
 
                 # ---------------- LIAM START ----------------
-                assert is_single # Assume this for entropy calcualtions
+                if not is_single:
+                    NotImplementedError("All modifications assume a single model")
                 curr_prob_not_log = model.get_normalized_probs(
                     bd, log_probs=False, sample=sample
                 ).data
                 ent = -(curr_prob*curr_prob_not_log).sum(-1)
+
+                if self.lm_model is not None:
+                    lm_out = self.lm_model(tgt)
+                    lm_prob = self.lm_model.get_normalized_probs(
+                        lm_out, log_probs=True, sample=sample
+                    )
+                # HERE: separate P_SM and P_LM, also combine them and renormalize
                 # ---------------- LIAM END ----------------
 
                 if is_single:
@@ -136,6 +154,7 @@ class SequenceScorer(object):
             score_i = avg_probs_i.sum() / tgt_len
             # ---------------- LIAM START ----------------
             ent_i = ent[i][start_idxs[i] : start_idxs[i] + tgt_len]
+            raise NotImplementedError("Adding MMI decoding to the scorer")
             # ---------------- LIAM END ----------------
             if avg_attn is not None:
                 avg_attn_i = avg_attn[i]

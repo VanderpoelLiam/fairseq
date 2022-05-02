@@ -174,12 +174,8 @@ def _main(cfg: DictConfig, output_file):
     ent_scorer = SequenceScorer(
         tgt_dict,
         compute_alignment=getattr(cfg.generation, "print_alignment", False),
+        **extra_gen_cls_kwargs,
     )
-
-    if cfg.generation.lm_path is not None:
-        from fairseq.models.transformer_lm import TransformerLanguageModel
-        lm_dir = cfg.generation.lm_path.split("checkpoint_best.pt")[0]
-        lm_model = TransformerLanguageModel.from_pretrained(lm_dir, "checkpoint_best.pt", cfg.task.data)
     # ---------------- LIAM ----------------
 
     # Handle tokenization and BPE
@@ -311,15 +307,18 @@ def _main(cfg: DictConfig, output_file):
                     # original hypothesis (after tokenization and BPE)
                     # ---------------- LIAM ----------------
                     pos_scores = hypo["positional_scores"].div_(math.log(2))[:-1].cpu().detach().numpy() # [:-1] drops the scoring for the EOS token
+                    # TODO: all this is different
                     if cfg.generation.lm_path is not None:
                         lm_score = lm_model.score(hypo_str)
                         lm_pos_scores = lm_score['positional_scores'].cpu().detach().numpy()
 
+                        # THIS IS ALL WRONG DUE TO NORMALIZATION
                         if getattr(cfg.generation, "score_reference", False):
                             # Scorer does not run MMI decoding, so we need to do it manually
                             sm_pos_scores = pos_scores
                             pos_scores = sm_pos_scores + cfg.generation.lm_weight * lm_pos_scores
                         else:
+                            raise NotImplementedError("P_SM and P_LM calculated incorrectly")
                             sm_pos_scores = pos_scores - cfg.generation.lm_weight * lm_pos_scores
 
                         assert lm_pos_scores.size == sm_pos_scores.size # Check they are the same size
