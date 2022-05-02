@@ -368,7 +368,7 @@ class FairseqTask(object):
             args (fairseq.dataclass.configs.GenerationConfig):
                 configuration object (dataclass) for generation
             extra_gen_cls_kwargs (Dict[str, Any]): extra options to pass
-                through to SequenceGenerator
+                through to SequenceGenerator and SequenceScorer
             prefix_allowed_tokens_fn (Callable[[int, torch.Tensor], List[int]]):
                 If provided, this function constrains the beam search to
                 allowed tokens only at each step. The provided function
@@ -389,6 +389,7 @@ class FairseqTask(object):
             return SequenceScorer(
                 self.target_dictionary,
                 compute_alignment=getattr(args, "print_alignment", False),
+                **extra_gen_cls_kwargs,
             )
 
         from fairseq.sequence_generator import (
