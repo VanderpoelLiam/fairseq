@@ -171,11 +171,12 @@ def _main(cfg: DictConfig, output_file):
     )
 
     # ---------------- LIAM ----------------
-    ent_scorer = SequenceScorer(
-        tgt_dict,
-        compute_alignment=getattr(cfg.generation, "print_alignment", False),
-        **extra_gen_cls_kwargs,
-    )
+    if not getattr(cfg.generation, "score_reference", False):
+        ent_scorer = SequenceScorer(
+            tgt_dict,
+            compute_alignment=getattr(cfg.generation, "print_alignment", False),
+            **extra_gen_cls_kwargs,
+        )
     # ---------------- LIAM ----------------
 
     # Handle tokenization and BPE
@@ -307,24 +308,7 @@ def _main(cfg: DictConfig, output_file):
                     # original hypothesis (after tokenization and BPE)
                     # ---------------- LIAM ----------------
                     if not getattr(cfg.generation, "score_reference", False):
-                        raise NotImplementedError("P_SM and P_LM calculated incorrectly")
-                    # pos_scores = .cpu().detach().numpy() # [:-1] drops the scoring for the EOS token
-                    # # TODO: all this is different
-                    # if cfg.generation.lm_path is not None:
-                    #     lm_score = lm_model.score(hypo_str)
-                    #     lm_pos_scores = lm_score['positional_scores'].cpu().detach().numpy()
-                    #
-                    #     # THIS IS ALL WRONG DUE TO NORMALIZATION
-                    #     if getattr(cfg.generation, "score_reference", False):
-                    #         # Scorer does not run MMI decoding, so we need to do it manually
-                    #         sm_pos_scores = pos_scores
-                    #         pos_scores = sm_pos_scores + cfg.generation.lm_weight * lm_pos_scores
-                    #     else:
-                    #
-                    #         sm_pos_scores = pos_scores - cfg.generation.lm_weight * lm_pos_scores
-                    #
-                    #     assert lm_pos_scores.size == sm_pos_scores.size # Check they are the same size
-
+                        hypo =ent_hypos[i][: cfg.generation.nbest][j]
 
                     if cfg.common_eval.print_tokens:
                         print(
@@ -394,11 +378,6 @@ def _main(cfg: DictConfig, output_file):
                             ),
                             file=output_file,
                         )
-
-
-                    if 'sm_entropy' not in hypo:
-                        ent_hypo = ent_hypos[i][: cfg.generation.nbest][j]
-                        hypo["entropy"] = ent_hypo["entropy"]
 
                     print(
                         "ENT-{}\t{}".format(
