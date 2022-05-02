@@ -34,11 +34,13 @@ class SequenceScorer(object):
             else {self.eos}
         )
 
+        # ---------------- LIAM ----------------
         self.lm_model = lm_model
         self.lm_weight = lm_weight
         self.ent_threshold = ent_threshold
         if self.lm_model is not None:
             self.lm_model.eval()
+        # ---------------- LIAM ----------------
 
 
     @torch.no_grad()
@@ -88,7 +90,7 @@ class SequenceScorer(object):
                     bd, log_probs=len(models) == 1, sample=sample
                 ).data
 
-                # ---------------- LIAM START ----------------
+                # ---------------- LIAM ----------------
                 if not is_single:
                     NotImplementedError("All modifications assume a single model")
                 curr_prob_not_log = model.get_normalized_probs(
@@ -101,8 +103,22 @@ class SequenceScorer(object):
                     lm_prob = self.lm_model.get_normalized_probs(
                         lm_out, log_probs=True, sample=sample
                     )
-                # HERE: separate P_SM and P_LM, also combine them and renormalize
-                # ---------------- LIAM END ----------------
+
+                    lm_prob_not_log = self.lm_model.get_normalized_probs(
+                        lm_out, log_probs=False, sample=sample
+                    )
+
+                    lm_ent = -(lm_prob*lm_prob_not_log).sum(-1)
+
+                    sm_prob = curr_prob
+                    mmi_prob = curr_prob + torch.mul(lm_prob, self.lm_weight)
+                    # Normalize the probabilities
+                    Z = torch.logsumexp(mmi_prob, -1)
+                    curr_prob = mmi_prob - Z[:,:,None]
+
+                    sm_prob = gather_target_probs(sm_prob, orig_target).view(sample["target"].shape)
+                    lm_prob = gather_target_probs(lm_prob, orig_target).view(sample["target"].shape)
+                # ---------------- LIAM ----------------
 
                 if is_single:
                     probs = gather_target_probs(curr_prob, orig_target)
@@ -152,10 +168,13 @@ class SequenceScorer(object):
             tgt_len = ref.numel()
             avg_probs_i = avg_probs[i][start_idxs[i] : start_idxs[i] + tgt_len]
             score_i = avg_probs_i.sum() / tgt_len
-            # ---------------- LIAM START ----------------
+            # ---------------- LIAM ----------------
             ent_i = ent[i][start_idxs[i] : start_idxs[i] + tgt_len]
-            raise NotImplementedError("Adding MMI decoding to the scorer")
-            # ---------------- LIAM END ----------------
+            if self.lm_model is not None:
+                lm_ent_i = lm_ent[i][start_idxs[i] : start_idxs[i] + tgt_len]
+                sm_prob_i = sm_prob[i][start_idxs[i] : start_idxs[i] + tgt_len]
+                lm_prob_i = lm_prob[i][start_idxs[i] : start_idxs[i] + tgt_len]
+            # ---------------- LIAM ----------------
             if avg_attn is not None:
                 avg_attn_i = avg_attn[i]
                 if self.compute_alignment:
@@ -170,16 +189,35 @@ class SequenceScorer(object):
                     alignment = None
             else:
                 avg_attn_i = alignment = None
-            hypos.append(
-                [
-                    {
-                        "tokens": ref,
-                        "score": score_i,
-                        "attention": avg_attn_i,
-                        "alignment": alignment,
-                        "positional_scores": avg_probs_i,
-                        "entropy": ent_i,
-                    }
-                ]
-            )
+            # ---------------- LIAM ----------------
+            if self.lm_model is None:
+                hypos.append(
+                    [
+                        {
+                            "tokens": ref,
+                            "score": score_i,
+                            "attention": avg_attn_i,
+                            "alignment": alignment,
+                            "positional_scores": avg_probs_i,
+                            "sm_entropy": ent_i,
+                        }
+                    ]
+                )
+            else:
+                hypos.append(
+                    [
+                        {
+                            "tokens": ref,
+                            "score": score_i,
+                            "attention": avg_attn_i,
+                            "alignment": alignment,
+                            "positional_scores": avg_probs_i,
+                            "sm_entropy": ent_i,
+                            "lm_entropy": lm_ent_i,
+                            "sm_pos_scores": sm_prob_i,
+                            "lm_pos_scores": lm_prob_i,
+                        }
+                    ]
+                )
+            # ---------------- LIAM ----------------
         return hypos

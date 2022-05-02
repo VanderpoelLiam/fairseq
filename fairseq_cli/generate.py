@@ -306,22 +306,24 @@ def _main(cfg: DictConfig, output_file):
                     score = hypo["score"] / math.log(2)  # convert to base 2
                     # original hypothesis (after tokenization and BPE)
                     # ---------------- LIAM ----------------
-                    pos_scores = hypo["positional_scores"].div_(math.log(2))[:-1].cpu().detach().numpy() # [:-1] drops the scoring for the EOS token
-                    # TODO: all this is different
-                    if cfg.generation.lm_path is not None:
-                        lm_score = lm_model.score(hypo_str)
-                        lm_pos_scores = lm_score['positional_scores'].cpu().detach().numpy()
-
-                        # THIS IS ALL WRONG DUE TO NORMALIZATION
-                        if getattr(cfg.generation, "score_reference", False):
-                            # Scorer does not run MMI decoding, so we need to do it manually
-                            sm_pos_scores = pos_scores
-                            pos_scores = sm_pos_scores + cfg.generation.lm_weight * lm_pos_scores
-                        else:
-                            raise NotImplementedError("P_SM and P_LM calculated incorrectly")
-                            sm_pos_scores = pos_scores - cfg.generation.lm_weight * lm_pos_scores
-
-                        assert lm_pos_scores.size == sm_pos_scores.size # Check they are the same size
+                    if not getattr(cfg.generation, "score_reference", False):
+                        raise NotImplementedError("P_SM and P_LM calculated incorrectly")
+                    # pos_scores = .cpu().detach().numpy() # [:-1] drops the scoring for the EOS token
+                    # # TODO: all this is different
+                    # if cfg.generation.lm_path is not None:
+                    #     lm_score = lm_model.score(hypo_str)
+                    #     lm_pos_scores = lm_score['positional_scores'].cpu().detach().numpy()
+                    #
+                    #     # THIS IS ALL WRONG DUE TO NORMALIZATION
+                    #     if getattr(cfg.generation, "score_reference", False):
+                    #         # Scorer does not run MMI decoding, so we need to do it manually
+                    #         sm_pos_scores = pos_scores
+                    #         pos_scores = sm_pos_scores + cfg.generation.lm_weight * lm_pos_scores
+                    #     else:
+                    #
+                    #         sm_pos_scores = pos_scores - cfg.generation.lm_weight * lm_pos_scores
+                    #
+                    #     assert lm_pos_scores.size == sm_pos_scores.size # Check they are the same size
 
 
                     if cfg.common_eval.print_tokens:
@@ -345,7 +347,7 @@ def _main(cfg: DictConfig, output_file):
                             " ".join(
                                 map(
                                     lambda x: "{:.4f}".format(x),
-                                    pos_scores.tolist(),
+                                    hypo["positional_scores"].div_(math.log(2))[:-1].tolist(),
                                 )
                             ),
                         ),
@@ -359,7 +361,7 @@ def _main(cfg: DictConfig, output_file):
                                 " ".join(
                                     map(
                                         lambda x: "{:.4f}".format(x),
-                                        sm_pos_scores.tolist(),
+                                        hypo["sm_pos_scores"].div_(math.log(2)).tolist(),
                                     )
                                 ),
                             ),
@@ -372,21 +374,20 @@ def _main(cfg: DictConfig, output_file):
                                 " ".join(
                                     map(
                                         lambda x: "{:.4f}".format(x),
-                                        lm_pos_scores.tolist(),
+                                        hypo["lm_pos_scores"].div_(math.log(2)).tolist(),
                                     )
                                 ),
                             ),
                             file=output_file,
                         )
 
-                        lm_entropy = lm_score['entropy']
                         print(
                             "ENT_LANG-{}\t{}".format(
                                 sample_id,
                                 " ".join(
                                     map(
                                         lambda x: "{:.4f}".format(x),
-                                        lm_entropy
+                                        hypo["lm_entropy"]
                                         .tolist(),
                                     )
                                 ),
@@ -395,7 +396,7 @@ def _main(cfg: DictConfig, output_file):
                         )
 
 
-                    if 'entropy' not in hypo:
+                    if 'sm_entropy' not in hypo:
                         ent_hypo = ent_hypos[i][: cfg.generation.nbest][j]
                         hypo["entropy"] = ent_hypo["entropy"]
 
@@ -405,7 +406,7 @@ def _main(cfg: DictConfig, output_file):
                             " ".join(
                                 map(
                                     lambda x: "{:.4f}".format(x),
-                                    hypo["entropy"]
+                                    hypo["sm_entropy"]
                                     .tolist()[:-1],
                                 )
                             ),
