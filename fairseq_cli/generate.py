@@ -321,7 +321,7 @@ def _main(cfg: DictConfig, output_file):
                         )
 
                     print(
-                        "H-{}\t{}\t{}".format(sample_id, score, hypo_str),
+                        "H-{}\t{}\t{}".format(sample_id, score, detok_hypo_str),
                         file=output_file,
                     )
 
