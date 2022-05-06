@@ -99,14 +99,15 @@ class SequenceScorer(object):
                 ent = -(curr_prob*curr_prob_not_log).sum(-1)
 
                 if self.lm_model is not None:
+                    # FIXME: This might be wrong
                     lm_out = self.lm_model(tgt)
                     lm_prob = self.lm_model.get_normalized_probs(
                         lm_out, log_probs=True, sample=sample
-                    )
+                    ).data
 
                     lm_prob_not_log = self.lm_model.get_normalized_probs(
                         lm_out, log_probs=False, sample=sample
-                    )
+                    ).data
 
                     lm_ent = -(lm_prob*lm_prob_not_log).sum(-1)
 
