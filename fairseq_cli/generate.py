@@ -331,7 +331,7 @@ def _main(cfg: DictConfig, output_file):
                             " ".join(
                                 map(
                                     lambda x: "{:.4f}".format(x),
-                                    hypo["positional_scores"].div_(math.log(2))[:-1].tolist(),
+                                    hypo["positional_scores"].div_(math.log(2)).tolist(),
                                 )
                             ),
                         ),
@@ -386,7 +386,7 @@ def _main(cfg: DictConfig, output_file):
                                 map(
                                     lambda x: "{:.4f}".format(x),
                                     hypo["sm_entropy"]
-                                    .tolist()[:-1],
+                                    .tolist(),
                                 )
                             ),
                         ),
@@ -462,6 +462,7 @@ def _main(cfg: DictConfig, output_file):
             sample["nsentences"] if "nsentences" in sample else sample["id"].numel()
         )
 
+    logger.info("NOTE: Last value for probability and entropy sequences is the EOS token value. The hypothesis sequence is therefore one value shorter than these sequences.")
     logger.info("NOTE: hypothesis and token scores are output in base 2")
     logger.info(
         "Translated {:,} sentences ({:,} tokens) in {:.1f}s ({:.2f} sentences/s, {:.2f} tokens/s)".format(
