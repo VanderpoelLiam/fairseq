@@ -366,7 +366,7 @@ def _main(cfg: DictConfig, output_file):
                         )
 
                         print(
-                            "ENT_LANG-{}\t{}".format(
+                            "ENT_LM-{}\t{}".format(
                                 sample_id,
                                 " ".join(
                                     map(
@@ -380,7 +380,7 @@ def _main(cfg: DictConfig, output_file):
                         )
 
                     print(
-                        "ENT-{}\t{}".format(
+                        "ENT_SM-{}\t{}".format(
                             sample_id,
                             " ".join(
                                 map(
