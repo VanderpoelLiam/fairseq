@@ -112,7 +112,9 @@ class SequenceScorer(object):
                     lm_ent = -(lm_prob*lm_prob_not_log).sum(-1)
 
                     sm_prob = curr_prob
-                    mmi_prob = curr_prob + torch.mul(lm_prob, self.lm_weight)
+                    high_ents = ent > self.ent_threshold
+                    weights = self.lm_weight * high_ents
+                    mmi_prob = curr_prob + lm_prob * weights[:, :, None]
                     # Normalize the probabilities
                     Z = torch.logsumexp(mmi_prob, -1)
                     curr_prob = mmi_prob - Z[:,:,None]
