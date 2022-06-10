@@ -121,6 +121,9 @@ class SequenceScorer(object):
 
                     sm_prob = gather_target_probs(sm_prob, orig_target).view(sample["target"].shape)
                     lm_prob = gather_target_probs(lm_prob, orig_target).view(sample["target"].shape)
+
+                # Want ranking wrt curr_prob. What is our target token or tokens?
+                rank = ent
                 # ---------------- LIAM ----------------
 
                 if is_single:
@@ -172,6 +175,7 @@ class SequenceScorer(object):
             avg_probs_i = avg_probs[i][start_idxs[i] : start_idxs[i] + tgt_len]
             score_i = avg_probs_i.sum() / tgt_len
             # ---------------- LIAM ----------------
+            rank_i = rank[i][start_idxs[i] : start_idxs[i] + tgt_len]
             ent_i = ent[i][start_idxs[i] : start_idxs[i] + tgt_len]
             if self.lm_model is not None:
                 lm_ent_i = lm_ent[i][start_idxs[i] : start_idxs[i] + tgt_len]
@@ -202,6 +206,7 @@ class SequenceScorer(object):
                             "attention": avg_attn_i,
                             "alignment": alignment,
                             "positional_scores": avg_probs_i,
+                            "rank": rank_i,
                             "sm_entropy": ent_i,
                         }
                     ]
@@ -215,6 +220,7 @@ class SequenceScorer(object):
                             "attention": avg_attn_i,
                             "alignment": alignment,
                             "positional_scores": avg_probs_i,
+                            "rank": rank_i,
                             "sm_entropy": ent_i,
                             "lm_entropy": lm_ent_i,
                             "sm_pos_scores": sm_prob_i,

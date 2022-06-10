@@ -338,6 +338,16 @@ def _main(cfg: DictConfig, output_file):
                         file=output_file,
                     )
 
+                    print(
+                        "RANK-{}\t{}".format(
+                            sample_id,
+                            " ".join(
+                                map(str,hypo["rank"].tolist())
+                            ),
+                        ),
+                        file=output_file,
+                    )
+
                     if cfg.generation.lm_path is not None:
                         print(
                             "P_SM-{}\t{}".format(
