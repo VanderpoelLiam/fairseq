@@ -122,8 +122,8 @@ class SequenceScorer(object):
                     sm_prob = gather_target_probs(sm_prob, orig_target).view(sample["target"].shape)
                     lm_prob = gather_target_probs(lm_prob, orig_target).view(sample["target"].shape)
 
-                # Want ranking wrt curr_prob. What is our target token or tokens?
-                rank = ent
+                rank = curr_prob.argsort(descending=True).add(1)
+                rank = gather_target_probs(rank, orig_target).view(sample["target"].shape)
                 # ---------------- LIAM ----------------
 
                 if is_single:
