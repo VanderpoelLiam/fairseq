@@ -64,6 +64,12 @@ class SequenceScorer(object):
                     s = e
 
         def gather_target_probs(probs, target):
+            # Uncomment for sanity check that shifting tokens by 1 in either direction leads to lower probabilites/worse rankings
+
+            # probs = probs.roll(-1, dims=1).gather(
+            #     dim=2,
+            #     index=target.unsqueeze(-1),
+            # )
             probs = probs.gather(
                 dim=2,
                 index=target.unsqueeze(-1),
